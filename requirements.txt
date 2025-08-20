@@ -1,4 +1,6 @@
 streamlit
 gspread
 oauth2client
-qrcode[pil]
+qrcode
+pillow
+opencv-python-headless
