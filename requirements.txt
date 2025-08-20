@@ -1,0 +1,7 @@
+streamlit
+gspread
+oauth2client
+pyzbar
+pillow
+numpy
+opencv-python-headless
