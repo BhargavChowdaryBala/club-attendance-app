@@ -10,9 +10,11 @@ import json
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
 if "gcp_service_account" in st.secrets:
-    creds_dict = json.loads(st.secrets["gcp_service_account"])
+    # On Streamlit Cloud, secrets are already a dict
+    creds_dict = st.secrets["gcp_service_account"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 else:
+    # Local development → use service_account.json file
     SERVICE_ACCOUNT_FILE = "service_account.json"
     creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
 
@@ -25,7 +27,7 @@ sheet = client.open(SHEET_NAME).sheet1
 def mark_attendance(roll_number):
     roll_number = str(roll_number).strip().lower()
     data = sheet.get_all_records()
-    for i, row in enumerate(data, start=2):  # start=2 (row 1 is header)
+    for i, row in enumerate(data, start=2):  # start=2 because row 1 is header
         sheet_roll = str(row["ROLL NUMBER"]).strip().lower()
         if sheet_roll == roll_number:
             if str(row["isPresent"]).strip().lower() == "present":
