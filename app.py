@@ -1,7 +1,6 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from pyzbar.pyzbar import decode
 import cv2
 import numpy as np
 from PIL import Image
@@ -10,11 +9,6 @@ import json
 # ---------------- Google Sheets setup ----------------
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-# If running locally, keep your JSON file
-# SERVICE_ACCOUNT_FILE = "service_account.json"
-# creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
-
-# If deploying on Streamlit Cloud, load from secrets
 if "gcp_service_account" in st.secrets:
     creds_dict = json.loads(st.secrets["gcp_service_account"])
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
@@ -40,12 +34,13 @@ def mark_attendance(roll_number):
             return "marked", row["NAME"]
     return "not_found", None
 
-# ---------------- QR decoding ----------------
+# ---------------- QR decoding using OpenCV ----------------
 def scan_qr_from_image(img):
-    img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    decoded_objects = decode(img)
-    if decoded_objects:
-        return decoded_objects[0].data.decode("utf-8")
+    img_bgr = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    detector = cv2.QRCodeDetector()
+    data, _, _ = detector.detectAndDecode(img_bgr)
+    if data:
+        return data
     return None
 
 # ---------------- Streamlit App ----------------
