@@ -20,7 +20,7 @@ else:
 
 client = gspread.authorize(creds)
 
-SHEET_NAME = "Workshop_Attendance"
+SHEET_NAME = "Attendance-1"
 sheet = client.open(SHEET_NAME).sheet1
 
 # ---------------- Attendance marking ----------------
@@ -96,3 +96,4 @@ col3.metric("⏳ Left", left)
 # --- Show current attendance list ---
 st.subheader("📋 Current Attendance List")
 st.dataframe(data)
+
