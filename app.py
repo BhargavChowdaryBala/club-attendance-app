@@ -70,18 +70,20 @@ if st.button("Submit Roll Number"):
 st.subheader("📷 Mark Attendance via QR Code (Back Camera)")
 
 camera_html = """
-<video id="video" autoplay playsinline width="300" height="200" style="border-radius:10px;border:2px solid #ccc;"></video>
+<video id="video" autoplay playsinline width="300" height="220" style="border-radius:10px;border:2px solid #ccc;"></video>
 <canvas id="canvas" style="display:none;"></canvas>
 <button id="capture" style="margin-top:10px;padding:8px 16px;border-radius:8px;background-color:#0d6efd;color:white;">📸 Capture</button>
+
 <script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const capture = document.getElementById('capture');
 
+// Try rear camera first
 navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
   .then(stream => { video.srcObject = stream; })
   .catch(err => {
-    console.warn("Rear camera not found, switching to default camera:", err);
+    console.warn("Rear camera not found, switching to default:", err);
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => { video.srcObject = stream; });
   });
@@ -92,35 +94,40 @@ capture.onclick = () => {
   canvas.height = video.videoHeight;
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
   const dataURL = canvas.toDataURL('image/png');
-  const streamlitEvent = new CustomEvent("streamlit_event", { detail: dataURL });
-  window.parent.document.dispatchEvent(streamlitEvent);
+  window.parent.postMessage({ type: 'capture', image: dataURL }, '*');
 };
 </script>
 """
 
-# Listen for the event from JS and get the image
-img_data = st.empty()
-html(camera_html, height=320)
+html(camera_html, height=350)
 
-# Receive the image from JS (via streamlit custom event)
-def get_img_from_js():
-    import streamlit.components.v1 as components
-    import streamlit.runtime.scriptrunner as scriptrunner
+# Listen for captured image
+capture_event = st.session_state.get("captured_image", None)
 
-    ctx = scriptrunner.get_script_run_ctx()
-    if ctx is None:
-        return None
-    session_id = ctx.session_id
-    return st.session_state.get(f"img_{session_id}", None)
+# Streamlit’s message listener to receive from iframe
+st.markdown("""
+<script>
+window.addEventListener('message', (event) => {
+  if (event.data.type === 'capture') {
+    const captured = event.data.image;
+    window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setComponentValue', value: captured }, '*');
+  }
+});
+</script>
+""", unsafe_allow_html=True)
 
-# Handle incoming image
-event = st.experimental_get_query_params().get("event", None)
-if event:
-    st.session_state["captured_image"] = event
+# Use the correct new API (no experimental)
+if "captured_image" not in st.session_state:
+    st.session_state["captured_image"] = None
 
-if "captured_image" in st.session_state:
+captured_image = st.query_params.get("captured_image", None)
+
+if captured_image:
+    st.session_state["captured_image"] = captured_image
+
+if st.session_state["captured_image"]:
     img_base64 = st.session_state["captured_image"]
-    if img_base64.startswith("data:image"):
+    if isinstance(img_base64, str) and img_base64.startswith("data:image"):
         img_bytes = base64.b64decode(img_base64.split(",")[1])
         img = Image.open(BytesIO(img_bytes))
         roll = scan_qr_from_image(img)
