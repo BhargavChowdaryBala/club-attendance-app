@@ -63,11 +63,47 @@ if st.button("Submit Roll Number"):
             st.error(f"❌ Roll Number {manual_roll} not found in the list")
 
 # --- Camera Input (mobile-friendly) ---
-st.subheader("📷 Mark Attendance via QR Code")
+# --- Camera Input (mobile-friendly with back camera) ---
+st.subheader("📷 Mark Attendance via QR Code (Back Camera)")
 
-img_file = st.camera_input("Scan your QR Code")
-if img_file is not None:
-    img = Image.open(img_file)
+from streamlit.components.v1 import html
+
+# Create an HTML video element that requests the rear (environment) camera
+camera_html = """
+<video id="video" autoplay playsinline width="300" height="200" style="border-radius: 10px; border: 2px solid #ccc;"></video>
+<canvas id="canvas" style="display:none;"></canvas>
+<button id="capture" style="margin-top:10px; padding:8px 16px; border-radius:8px;">📸 Capture</button>
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const capture = document.getElementById('capture');
+
+navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+  .then(stream => { video.srcObject = stream; })
+  .catch(err => {
+    console.error("Rear camera not available, using default camera:", err);
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; });
+  });
+
+capture.onclick = () => {
+  const context = canvas.getContext('2d');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const dataURL = canvas.toDataURL('image/png');
+  window.parent.postMessage({ type: 'streamlit:setComponentValue', value: dataURL }, '*');
+};
+</script>
+"""
+
+img_data = html(camera_html, height=300)
+
+if img_data is not None:
+    import base64
+    from io import BytesIO
+    img_bytes = base64.b64decode(img_data.split(',')[1])
+    img = Image.open(BytesIO(img_bytes))
     roll = scan_qr_from_image(img)
     if roll:
         status, name = mark_attendance(roll)
@@ -79,6 +115,7 @@ if img_file is not None:
             st.error(f"❌ Roll Number {roll} not found in the list")
     else:
         st.warning("⚠️ No QR code detected in the image.")
+
 
 # --- Attendance Summary ---
 st.subheader("📊 Attendance Summary")
@@ -96,6 +133,7 @@ col3.metric("⏳ Left", left)
 # --- Show current attendance list ---
 st.subheader("📋 Current Attendance List")
 st.dataframe(data)
+
 
 
 
