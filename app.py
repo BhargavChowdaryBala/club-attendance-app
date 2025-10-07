@@ -102,7 +102,14 @@ img_data = html(camera_html, height=300)
 if img_data is not None:
     import base64
     from io import BytesIO
+   if isinstance(img_data, str) and img_data.startswith("data:image"):
     img_bytes = base64.b64decode(img_data.split(',')[1])
+    img = Image.open(BytesIO(img_bytes))
+    roll = scan_qr_from_image(img)
+    # (rest of your existing code)
+else:
+    st.warning("⚠️ No image captured yet.")
+
     img = Image.open(BytesIO(img_bytes))
     roll = scan_qr_from_image(img)
     if roll:
@@ -133,6 +140,7 @@ col3.metric("⏳ Left", left)
 # --- Show current attendance list ---
 st.subheader("📋 Current Attendance List")
 st.dataframe(data)
+
 
 
 
