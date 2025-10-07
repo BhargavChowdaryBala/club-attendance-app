@@ -4,14 +4,15 @@ from oauth2client.service_account import ServiceAccountCredentials
 import cv2
 import numpy as np
 from PIL import Image
-import json
 
 # ------------------ GOOGLE SHEETS SETUP ------------------
 
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+# Load credentials from Streamlit secrets
+service_account_info = st.secrets["gcp_service_account"]
 
-# Load credentials from Streamlit Secrets
-service_account_info = st.secrets["GOOGLE_CREDENTIALS"]
+scope = ["https://spreadsheets.google.com/feeds",
+         "https://www.googleapis.com/auth/drive"]
+
 creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
 client = gspread.authorize(creds)
 
