@@ -33,7 +33,7 @@ def mark_attendance(roll_number):
     return False, None
 
 def scan_qr_from_image(img):
-    """Better QR detection for mobile photos"""
+    """Improved QR detection for mobile photos"""
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)  # Improve contrast
@@ -42,16 +42,17 @@ def scan_qr_from_image(img):
     data, bbox, _ = detector.detectAndDecode(gray)
     if data:
         return data.strip()
-    
+
     # Fallback for multiple QR codes
-    data_list, bbox_list, _ = detector.detectAndDecodeMulti(gray)
-    if data_list:
-        return data_list[0].strip()
-    
+    result = detector.detectAndDecodeMulti(gray)
+    if result is not None:
+        data_list, bbox_list, _ = result
+        if data_list:
+            return data_list[0].strip()  # take first QR if multiple
     return None
 
 def show_confetti():
-    """Display confetti using Streamlit animations"""
+    """Display confetti using Streamlit balloons"""
     st.balloons()
 
 # ------------------ STREAMLIT UI ------------------
