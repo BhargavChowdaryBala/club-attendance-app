@@ -1,6 +1,7 @@
 streamlit
 gspread
 oauth2client
-qrcode
+pyzbar
+opencv-python
 pillow
-opencv-python-headless
+numpy
