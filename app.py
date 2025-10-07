@@ -62,7 +62,6 @@ if img_file is not None:
         found, name = mark_attendance(roll)
         if found:
             st.success(f"✅ {name} ({roll}) marked Present")
-            st.balloons()
         else:
             st.error(f"❌ Roll Number {roll} not found in the list")
     else:
@@ -79,7 +78,6 @@ if st.button("Mark Attendance"):
         found, name = mark_attendance(manual_roll)
         if found:
             st.success(f"✅ {name} ({manual_roll}) marked Present")
-            st.balloons()
         else:
             st.error(f"❌ Roll Number {manual_roll} not found")
 
