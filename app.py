@@ -33,23 +33,36 @@ def mark_attendance(roll_number):
     return False, None
 
 def scan_qr_from_image(img):
-    """Improved QR detection for mobile photos"""
+    """Robust QR detection for mobile photos"""
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)  # Improve contrast
 
     detector = cv2.QRCodeDetector()
+    
+    # Single QR detection
     data, bbox, _ = detector.detectAndDecode(gray)
     if data:
         return data.strip()
 
-    # Fallback for multiple QR codes
+    # Multi QR detection (robust handling)
     result = detector.detectAndDecodeMulti(gray)
-    if result is not None:
+    if result is None:
+        return None
+
+    # Handle tuple return safely
+    if len(result) == 3:
         data_list, bbox_list, _ = result
-        if data_list:
-            return data_list[0].strip()  # take first QR if multiple
+    elif len(result) == 2:
+        data_list, bbox_list = result
+    else:
+        return None
+
+    if data_list and len(data_list) > 0:
+        return data_list[0].strip()  # take first QR if multiple
+
     return None
+
 
 def show_confetti():
     """Display confetti using Streamlit balloons"""
@@ -121,3 +134,4 @@ except Exception as e:
     st.text(str(e))
 
 st.caption("© 2025 Bhargav | Club Workshop Attendance System")
+
