@@ -33,13 +33,26 @@ def mark_attendance(roll_number):
     return False, None
 
 def scan_qr_from_image(img):
-    """Decode QR code from image using OpenCV"""
+    """Better QR detection for mobile photos"""
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.equalizeHist(gray)  # Improve contrast
+
     detector = cv2.QRCodeDetector()
-    data, bbox, _ = detector.detectAndDecode(img)
+    data, bbox, _ = detector.detectAndDecode(gray)
     if data:
-        return data
+        return data.strip()
+    
+    # Fallback for multiple QR codes
+    data_list, bbox_list, _ = detector.detectAndDecodeMulti(gray)
+    if data_list:
+        return data_list[0].strip()
+    
     return None
+
+def show_confetti():
+    """Display confetti using Streamlit animations"""
+    st.balloons()
 
 # ------------------ STREAMLIT UI ------------------
 
@@ -69,6 +82,7 @@ if img_file is not None:
         found, name = mark_attendance(roll)
         if found:
             st.success(f"✅ {name} ({roll}) marked Present")
+            show_confetti()
         else:
             st.error(f"❌ Roll Number {roll} not found in the list.")
     else:
@@ -85,6 +99,7 @@ if st.button("Submit Roll Number"):
         found, name = mark_attendance(manual_roll)
         if found:
             st.success(f"✅ {name} ({manual_roll}) marked Present")
+            show_confetti()
         else:
             st.error(f"❌ Roll Number {manual_roll} not found in the list.")
     else:
