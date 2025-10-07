@@ -1,6 +1,6 @@
 streamlit
 gspread
 oauth2client
-opencv-python
+opencv-python-headless
 pillow
 numpy
