@@ -102,26 +102,25 @@ img_data = html(camera_html, height=300)
 if img_data is not None:
     import base64
     from io import BytesIO
-   if isinstance(img_data, str) and img_data.startswith("data:image"):
-    img_bytes = base64.b64decode(img_data.split(',')[1])
-    img = Image.open(BytesIO(img_bytes))
-    roll = scan_qr_from_image(img)
-    # (rest of your existing code)
-else:
-    st.warning("⚠️ No image captured yet.")
 
-    img = Image.open(BytesIO(img_bytes))
-    roll = scan_qr_from_image(img)
-    if roll:
-        status, name = mark_attendance(roll)
-        if status == "marked":
-            st.success(f"✅ {name} ({roll}) marked Present")
-        elif status == "already":
-            st.warning(f"⚠️ {name} ({roll}) is already marked Present")
+    if isinstance(img_data, str) and img_data.startswith("data:image"):
+        img_bytes = base64.b64decode(img_data.split(',')[1])
+        img = Image.open(BytesIO(img_bytes))
+        roll = scan_qr_from_image(img)
+
+        if roll:
+            status, name = mark_attendance(roll)
+            if status == "marked":
+                st.success(f"✅ {name} ({roll}) marked Present")
+            elif status == "already":
+                st.warning(f"⚠️ {name} ({roll}) is already marked Present")
+            else:
+                st.error(f"❌ Roll Number {roll} not found in the list")
         else:
-            st.error(f"❌ Roll Number {roll} not found in the list")
+            st.warning("⚠️ No QR code detected in the image.")
     else:
-        st.warning("⚠️ No QR code detected in the image.")
+        st.warning("⚠️ No image captured yet.")
+
 
 
 # --- Attendance Summary ---
@@ -140,6 +139,7 @@ col3.metric("⏳ Left", left)
 # --- Show current attendance list ---
 st.subheader("📋 Current Attendance List")
 st.dataframe(data)
+
 
 
 
