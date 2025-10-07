@@ -72,63 +72,54 @@ st.subheader("📷 Mark Attendance via QR Code (Back Camera)")
 camera_html = """
 <video id="video" autoplay playsinline width="300" height="220" style="border-radius:10px;border:2px solid #ccc;"></video>
 <canvas id="canvas" style="display:none;"></canvas>
-<button id="capture" style="margin-top:10px;padding:8px 16px;border-radius:8px;background-color:#0d6efd;color:white;">📸 Capture</button>
+<button id="capture" disabled style="margin-top:10px;padding:8px 16px;border-radius:8px;background-color:#0d6efd;color:white;">📸 Capture</button>
 
 <script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const capture = document.getElementById('capture');
 
-// Try rear camera first
+// Try rear camera first, fallback to default if not available
 navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
-  .then(stream => { video.srcObject = stream; })
+  .then(stream => { video.srcObject = stream; video.play(); })
   .catch(err => {
     console.warn("Rear camera not found, switching to default:", err);
     navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => { video.srcObject = stream; });
+      .then(stream => { video.srcObject = stream; video.play(); })
+      .catch(e => { console.error("No camera access:", e); });
   });
 
-capture.onclick = () => {
+// Enable capture button only after video is playing (ensures videoWidth/videoHeight > 0)
+video.addEventListener('playing', () => {
+  capture.disabled = false;
+});
+
+capture.addEventListener('click', () => {
+  // if video not ready, wait briefly
+  if (video.videoWidth === 0 || video.videoHeight === 0) {
+    setTimeout(() => { capture.click(); }, 150);
+    return;
+  }
+
   const context = canvas.getContext('2d');
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
   const dataURL = canvas.toDataURL('image/png');
-  window.parent.postMessage({ type: 'capture', image: dataURL }, '*');
-};
+
+  // Use Streamlit's expected message format so components.html returns value
+  window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setComponentValue', value: dataURL }, '*');
+});
 </script>
 """
 
-html(camera_html, height=350)
+# This will return the dataURL string when the JS posts it (or None while waiting)
+img_data = html(camera_html, height=360)
 
-# Listen for captured image
-capture_event = st.session_state.get("captured_image", None)
-
-# Streamlit’s message listener to receive from iframe
-st.markdown("""
-<script>
-window.addEventListener('message', (event) => {
-  if (event.data.type === 'capture') {
-    const captured = event.data.image;
-    window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setComponentValue', value: captured }, '*');
-  }
-});
-</script>
-""", unsafe_allow_html=True)
-
-# Use the correct new API (no experimental)
-if "captured_image" not in st.session_state:
-    st.session_state["captured_image"] = None
-
-captured_image = st.query_params.get("captured_image", None)
-
-if captured_image:
-    st.session_state["captured_image"] = captured_image
-
-if st.session_state["captured_image"]:
-    img_base64 = st.session_state["captured_image"]
-    if isinstance(img_base64, str) and img_base64.startswith("data:image"):
-        img_bytes = base64.b64decode(img_base64.split(",")[1])
+# If we received an image dataURL, process it immediately
+if img_data is not None and isinstance(img_data, str) and img_data.startswith("data:image"):
+    try:
+        img_bytes = base64.b64decode(img_data.split(",")[1])
         img = Image.open(BytesIO(img_bytes))
         roll = scan_qr_from_image(img)
         if roll:
@@ -141,7 +132,8 @@ if st.session_state["captured_image"]:
                 st.error(f"❌ Roll Number {roll} not found in the list")
         else:
             st.warning("⚠️ No QR code detected in the image.")
-
+    except Exception as e:
+        st.error(f"Error processing captured image: {e}")
 
 # --- Attendance Summary ---
 st.subheader("📊 Attendance Summary")
